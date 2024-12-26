@@ -1,35 +1,43 @@
 import random
 from augraphy import *
 import cv2
-import numpy as np
+
 
 ink_phase = [
     InkBleed(
         intensity_range=(0.5, 0.6),
         kernel_size=random.choice([(5, 5), (3, 3)]),
         severity=(0.3, 0.8),
-        p=0.4,
+        p=0.5,
     ),
-    BleedThrough(
-        intensity_range=(0.1, 0.3),
-        color_range=(32, 224),
-        ksize=(17, 17),
-        sigmaX=1,
-        alpha=random.uniform(0.1, 0.2),
-        offsets=(10, 20),
-        p=0.4,
+    OneOf(
+        [    
+            InkShifter(),
+            InkMottling(),
+        ],
+        p=1.0,
     ),
-    Letterpress(
-        n_samples=(100, 400),
-        n_clusters=(200, 400),
-        std_range=(500, 3000),
-        value_range=(150, 224),
-        value_threshold_range=(96, 128),
-        blur=1,
-        p=0.4,
+    OneOf(
+        [
+            BleedThrough(
+                intensity_range=(0.1, 0.9),
+                color_range=(0, 224),
+                ksize=(17, 17),
+                sigmaX=1,
+                alpha=random.uniform(0.9, 1.2),
+                offsets=(10, 20),
+            ),
+            Letterpress(
+                n_samples=(100, 400),
+                n_clusters=(200, 400),
+                std_range=(500, 3000),
+                value_range=(150, 224),
+                value_threshold_range=(96, 128),
+                blur=1,
+            ),
+        ],
+        p=1.0
     ),
-
-    
     OneOf(
         [
             LowInkRandomLines(
@@ -74,7 +82,7 @@ paper_phase = [
                 imgy=random.randint(256, 512),
                 n_rotation_range=(10, 15),
                 color="random",
-                alpha_range=(0.25, 0.5),
+                alpha_range=(0.2, 0.4), # 0.5 is too high
             ),
             VoronoiTessellation(
                 mult_range=(50, 80),
@@ -103,14 +111,14 @@ paper_phase = [
 
 post_phase = [
     Geometric(
-        rotate_range=(-15, 15),
+        rotate_range=(-10, 10),
         p=0.2,
     ),
 
     ShadowCast(
         shadow_opacity_range = (0.5, 0.9),
-        shadow_width_range=(0.5, 0.8),
-        shadow_height_range=(0.5, 0.8),
+        shadow_width_range=(0.5, 1.0),
+        shadow_height_range=(0.5, 1.0),
         p=0.5,
     ),
 
@@ -198,8 +206,8 @@ os.mkdir("./output")
 input_path="./input/image3.png"
 
 image = cv2.imread(input_path)
-# 使用插值法将高度放缩为1024个像素，宽度等比例缩放
-image = cv2.resize(image, (int(2000*image.shape[1]/image.shape[0]), 2000))
+# # 使用插值法将高度放缩为1024个像素，宽度等比例缩放
+# image = cv2.resize(image, (int(2000*image.shape[1]/image.shape[0]), 2000))
 
 for i in range(10):
     pipeline = AugraphyPipeline(ink_phase=ink_phase, paper_phase=paper_phase, post_phase=post_phase)
