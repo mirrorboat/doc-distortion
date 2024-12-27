@@ -2,5 +2,8 @@ augraphy_cache/
 final_test/
 input/GT/
 psf/
-testset_1226/
 testset/
+*test*/
+*.zip
+output/
+fonts/
