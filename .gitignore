@@ -24,3 +24,5 @@ not_exist_data/
 *.pyc
 *.txt
 tmp.py
+truedataset/
+*.log

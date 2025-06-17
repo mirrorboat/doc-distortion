@@ -1,4 +1,4 @@
-from distortion_utils import blur, shadow, wrap, binarization
+from distortion_utils_new import blur, shadow, wrap, binarization
 import json
 from data_utils import s3Dataset, localDataset
 import os
@@ -11,10 +11,10 @@ parser.add_argument("--chunk_num", type=int, default=8)
 parser.add_argument("--chunk_idx", type=int, default=0)
 parser.add_argument("--distortion", type=str, required=True)
 # parser.add_argument("--data_name", type=str, required=True)
-parser.add_argument("--target_folder", type=str, default="batch_distorted_images3")
+parser.add_argument("--target_folder", type=str, default="batch_distorted_images_bigger_distortion")
 # parser.add_argument("--target_folder", type=str, default="mnt/hwfile/opendatalab/chenjingzhou/cjz/opendatalab/cjz/MinerU/distortion_data/old")
 parser.add_argument("--idx_folder", type=str, default="subset_idx")
-parser.add_argument("--blur_psf_ratio", type=int, default=0.01)
+# parser.add_argument("--blur_psf_ratio", type=int, default=0.01)
 args = parser.parse_args()
 
 # data_dict = {
@@ -163,7 +163,7 @@ if __name__ == '__main__':
         else:
             my_dataset = localDataset(meta_data=meta_data, folder="")
         if args.distortion == "blur":
-            my_distortion = blur(psf_folder="/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/psf", psf_size_mode = "interval", ratio = args.blur_psf_ratio)
+            my_distortion = blur(psf_folder="/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/psf_subset", psf_size_mode = "ratio")
         elif args.distortion == "shadow":
             # my_distortion = shadow(ink_color_range=(0, 0))
             my_distortion = shadow()
@@ -171,7 +171,8 @@ if __name__ == '__main__':
             # my_distortion = wrap(ink_color_range=(0, 0))
             my_distortion = wrap()
         elif args.distortion == "binarization":
-            my_distortion = binarization(ink_color_range=(0, 0))
+            # my_distortion = binarization(ink_color_range=(0, 0))
+            my_distortion = binarization()
         elif args.distortion == "none":
             my_distortion = lambda x: x
         else:

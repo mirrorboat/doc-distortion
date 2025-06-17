@@ -18,6 +18,7 @@ do
 #SBATCH --output=./tmp/${task}_output.txt   # 标准输出文件
 #SBATCH --error=./tmp/${task}_error.txt     # 错误输出文件
 
-python batch_distortion.py --distortion ${task}
+# python batch_distortion.py --distortion ${task}
+python select_json_subset.py --distortion ${task}
 EOT
 done

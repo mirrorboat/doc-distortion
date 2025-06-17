@@ -16,6 +16,8 @@ do
 #SBATCH --output=./log/binarization_chunk_${CHUNK_IDX}_output.txt   # 标准输出文件
 #SBATCH --error=./log/binarization_chunk_${CHUNK_IDX}_error.txt     # 错误输出文件
 
+proxy_off
+
 python batch_distortion.py \
     --chunk_num ${CHUNK_NUM} \
     --chunk_idx ${CHUNK_IDX} \

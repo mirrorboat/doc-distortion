@@ -1,13 +1,14 @@
 #!/bin/bash
 
 task_list=(
-    binarization
-    blur
-    wrap
-    shadow
+    # binarization
+    # blur
+    # wrap
+    # shadow
+    none
 )
 
-CHUNK_NUM=1
+CHUNK_NUM=16
 
 for task in ${task_list[@]}
 do
@@ -19,14 +20,15 @@ do
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --output=./log/testset/${task}_chunk_${CHUNK_IDX}_output_new.txt
-#SBATCH --error=./log/testset/${task}_chunk_${CHUNK_IDX}_error_new.txt
+#SBATCH --output=./log_more_distortion/${task}_chunk_${CHUNK_IDX}_output.txt
+#SBATCH --error=./log_more_distortion/${task}_chunk_${CHUNK_IDX}_error.txt
+#SBATCH --job-name=n${task}${CHUNK_IDX}
 
-python batch_distortion.py \
+python batch_distortion_new.py \
     --chunk_num ${CHUNK_NUM} \
     --chunk_idx ${CHUNK_IDX} \
     --distortion ${task} \
-    --target_folder 20250130_testset
+
 EOT
 done
 done

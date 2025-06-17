@@ -13,6 +13,8 @@ do
 #SBATCH --output=./log/blur_chunk_${CHUNK_IDX}_output_new.txt   # 标准输出文件
 #SBATCH --error=./log/blur_chunk_${CHUNK_IDX}_error_new.txt     # 错误输出文件
 
+proxy_off
+
 python batch_distortion.py \
     --chunk_num ${CHUNK_NUM} \
     --chunk_idx ${CHUNK_IDX} \

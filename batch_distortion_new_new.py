@@ -1,20 +1,21 @@
-from distortion_utils import blur, shadow, wrap, binarization
+from distortion_utils_small_image import blur, shadow, wrap, binarization
 import json
 from data_utils import s3Dataset, localDataset
 import os
 import argparse
 from tqdm import tqdm
 import cv2
+from petrel_client.client import Client
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--chunk_num", type=int, default=8)
+parser.add_argument("--chunk_num", type=int, default=64)
 parser.add_argument("--chunk_idx", type=int, default=0)
 parser.add_argument("--distortion", type=str, required=True)
 # parser.add_argument("--data_name", type=str, required=True)
-parser.add_argument("--target_folder", type=str, default="batch_distorted_images3")
+parser.add_argument("--target_folder", type=str, default="0408batch_distorted_images_bigger_distortion")
 # parser.add_argument("--target_folder", type=str, default="mnt/hwfile/opendatalab/chenjingzhou/cjz/opendatalab/cjz/MinerU/distortion_data/old")
 parser.add_argument("--idx_folder", type=str, default="subset_idx")
-parser.add_argument("--blur_psf_ratio", type=int, default=0.01)
+# parser.add_argument("--blur_psf_ratio", type=int, default=0.01)
 args = parser.parse_args()
 
 # data_dict = {
@@ -81,17 +82,17 @@ args = parser.parse_args()
 # }
 
 data_dict = {
-    'exam_cn140K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_exam_zh-140k.json",
-    'mineru_cn2M': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_cn-2000k.json",
-    'mineru_en2M': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_en-2000k.json",
-    'table_cn440K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_table_zh-440k.json",
-    'table_en100K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_table_en-100k.json",
-    # 'exam_en8K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_exam_en-8k.json", # 用尽了
-    '3col_cn30K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_3col_zh-30k.json",
-    '3col_en20K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_3col_en-20k.json",
-    'newspaper_cn60K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_newspaper_zh-60k.json",
-    'math_cn200K': "/mnt/hwfile/opendatalab/zhangrui/shared_data/mineru_lvlm_data/mineru_math_cn200K.json",
-    'math_en200K': "/mnt/hwfile/opendatalab/zhangrui/shared_data/mineru_lvlm_data/mineru_math_en200K.json",
+    'math_cn200K': "/mnt/hwfile/opendatalab/bigdata_mineru/zhangrui/shared_data/mineru_lvlm_data/mineru_math_cn200K.json",
+    'math_en200K': "/mnt/hwfile/opendatalab/bigdata_mineru/zhangrui/shared_data/mineru_lvlm_data/mineru_math_en200K.json",
+    'exam_cn140K': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_exam_zh-140k.json",
+    'mineru_cn2M': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_cn-2000k.json",
+    'mineru_en2M': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_en-2000k.json",
+    'table_cn440K': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_table_zh-440k.json",
+    'table_en100K': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_table_en-100k.json",
+    'exam_en8K': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_exam_en-8k.json", # 用尽了
+    '3col_cn30K': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_3col_zh-30k.json",
+    '3col_en20K': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_3col_en-20k.json",
+    # 'newspaper_cn60K': "/mnt/hwfile/opendatalab/bigdata_mineru/liuzheng/Mineru/dataset/Stage2/Mineru_newspaper_zh-60k.json",
 }
 
 
@@ -99,11 +100,12 @@ distortion_2_postfix={
     'binarization': 1,
     'blur': 2,
     'shadow': 3,
-    'wrap': 4,
+    'warp': 4,
     'none': 5,
 }
 
 if __name__ == '__main__':
+    s3_prefix="s3://doc-parse-huawei/mineru2/distortion/"
     for data_name in data_dict.keys():
         print(f"***start to process {data_name}***", flush=True)
         idx_folder = args.idx_folder
@@ -115,11 +117,12 @@ if __name__ == '__main__':
         
         with open(meta_data_path, 'r') as f:
             meta_data = json.load(f)
-        print("1", flush=True)
+        # print("1", flush=True)
         # if not data_dict[data_name].get("no_subset_idx", False):
         idxs1 = []
         for file in os.listdir(idx_folder):
-            if file.startswith(data_name) and file.endswith(f"_{distortion_2_postfix[args.distortion]}_third_sampling.txt"): # 第二次采样加了_new，第三次采样加了_third_sampling
+            if file.startswith(data_name) and (file.endswith(f"_{distortion_2_postfix[args.distortion]}.txt") or file.endswith(f"_{distortion_2_postfix[args.distortion]}_new.txt")): # 第二次采样加了_new，第三次采样加了_third_sampling
+                print(f"file: {file}", flush=True)
                 with open(os.path.join(idx_folder, file), "r") as f:
                     idxs1 = [int(idx.strip()) for idx in f.readlines()]
         
@@ -128,7 +131,7 @@ if __name__ == '__main__':
             print(f"no idxs found for {data_name}", flush=True)
         else:
             meta_data = [meta_data[idx] for idx in idxs1]
-        print("2", flush=True)
+        # print("2", flush=True)
 
         # # ############ Save meta data ############
         # meta_data_save_folder = "./meta_data_subset_third_sampling"
@@ -148,7 +151,6 @@ if __name__ == '__main__':
             meta_data = meta_data[chunk_idx*chunk_size:(chunk_idx+1)*chunk_size]
         print(f"len(meta_data): {len(meta_data)}", flush=True)
         print("meta data done", flush=True)
-        print("3", flush=True)
 
         # with open("/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/subset_idx/mineru_en2M_200k_1.txt", "r") as f:
         #     idxs1 = [int(idx.strip()) for idx in f.readlines()]
@@ -163,15 +165,16 @@ if __name__ == '__main__':
         else:
             my_dataset = localDataset(meta_data=meta_data, folder="")
         if args.distortion == "blur":
-            my_distortion = blur(psf_folder="/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/psf", psf_size_mode = "interval", ratio = args.blur_psf_ratio)
+            my_distortion = blur(psf_folder="/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/psf_subset", psf_size_mode = "ratio")
         elif args.distortion == "shadow":
             # my_distortion = shadow(ink_color_range=(0, 0))
             my_distortion = shadow()
-        elif args.distortion == "wrap":
+        elif args.distortion == "warp":
             # my_distortion = wrap(ink_color_range=(0, 0))
             my_distortion = wrap()
         elif args.distortion == "binarization":
-            my_distortion = binarization(ink_color_range=(0, 0))
+            # my_distortion = binarization(ink_color_range=(0, 0))
+            my_distortion = binarization()
         elif args.distortion == "none":
             my_distortion = lambda x: x
         else:
@@ -184,23 +187,40 @@ if __name__ == '__main__':
 
         for idx in tqdm(range(len(my_dataset))):
             try:
+                # image_name, image_data = my_dataset[idx]
+                # # 截取"mineru:s3://doc-parse-huawei/"以后的部分作为image_name，注意image_name第一个字符不能是/，否则会被认为是绝对路径
+                # image_name = image_name.split("mineru:s3://doc-parse-huawei/")[-1]
+                # path = os.path.join(target_folder, args.distortion, image_name)
+                # # print(f"target_folder: {target_folder}", flush=True)
+                # # print(f"image_name: {image_name}", flush=True)
+                # # print(f"path: {path}", flush=True)
+                # # exit()
+                # # 如果存在则跳过
+                # if os.path.exists(path):
+                #     continue
+                # distorted_image = my_distortion(image_data)
+                # # if not os.path.exists(os.path.dirname(path)):
+                # os.makedirs(os.path.dirname(path), exist_ok=True)
+                # cv2.imwrite(path, distorted_image)
+
                 image_name, image_data = my_dataset[idx]
                 # 截取"mineru:s3://doc-parse-huawei/"以后的部分作为image_name，注意image_name第一个字符不能是/，否则会被认为是绝对路径
+                # image_name = image_name.split("mineru:s3://doc-parse-huawei/")[-1]
                 image_name = image_name.split("mineru:s3://doc-parse-huawei/")[-1]
-                path = os.path.join(target_folder, args.distortion, image_name)
-                # print(f"target_folder: {target_folder}", flush=True)
-                # print(f"image_name: {image_name}", flush=True)
-                # print(f"path: {path}", flush=True)
-                # exit()
-                # 如果存在则跳过
-                if os.path.exists(path):
-                    continue
+                local_image_filepath = os.path.join(target_folder, args.distortion, image_name)
+                s3_image_path = os.path.join(s3_prefix, args.distortion, image_name)
+
                 distorted_image = my_distortion(image_data)
-                # if not os.path.exists(os.path.dirname(path)):
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                cv2.imwrite(path, distorted_image)
+                if not os.path.exists(os.path.dirname(local_image_filepath)):
+                    os.makedirs(os.path.dirname(local_image_filepath))
+                cv2.imwrite(local_image_filepath, distorted_image)
+                client = Client()
+                with open(local_image_filepath, 'rb') as file_data:
+                    img_bytes = file_data.read()
+                    client.put('cluster_huawei:' + s3_image_path, img_bytes)
+                os.remove(local_image_filepath)
             except Exception as e:
-                print(path)
+                print(local_image_filepath)
                 print(f"error: {e}", flush=True)
                 continue
         print(f"***finish processing {data_name}***", flush=True)

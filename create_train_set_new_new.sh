@@ -5,9 +5,10 @@ task_list=(
     blur
     wrap
     shadow
+    none
 )
 
-CHUNK_NUM=1
+CHUNK_NUM=4
 
 for task in ${task_list[@]}
 do
@@ -15,18 +16,19 @@ for CHUNK_IDX in $(seq 0 $((CHUNK_NUM - 1)))
 do
     sbatch <<EOT
 #!/bin/bash
-#SBATCH --partition=s2_bigdata
+#SBATCH --partition=new_cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --output=./log/testset/${task}_chunk_${CHUNK_IDX}_output_new.txt
-#SBATCH --error=./log/testset/${task}_chunk_${CHUNK_IDX}_error_new.txt
+#SBATCH --cpus-per-task=8
+#SBATCH --output=./log_more_distortion_new2/${task}_chunk_${CHUNK_IDX}_output.txt
+#SBATCH --error=./log_more_distortion_new2/${task}_chunk_${CHUNK_IDX}_error.txt
+#SBATCH --job-name=${CHUNK_IDX}${task}
 
-python batch_distortion.py \
+python batch_distortion_new_new.py \
     --chunk_num ${CHUNK_NUM} \
     --chunk_idx ${CHUNK_IDX} \
     --distortion ${task} \
-    --target_folder 20250130_testset
+
 EOT
 done
 done

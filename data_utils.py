@@ -26,7 +26,8 @@ class s3Dataset(Dataset):
         # return self.meta_data[idx]["image"].split("/")[-1], read_s3_object_content(self.s3_client, os.path.join(self.folder, self.meta_data[idx]["image"]))
         # return self.meta_data[idx]["image"], read_s3_object_content(self.s3_client, os.path.join(self.folder, self.meta_data[idx]["image"]))
         # 返回的图像应为cv2格式的图像而非bytes
-        return self.meta_data[idx]["image"], cv2.imdecode(np.frombuffer(read_s3_object_content(self.s3_client, os.path.join(self.folder, self.meta_data[idx]["image"])), np.uint8), cv2.IMREAD_COLOR)
+        return self.meta_data[idx]["image"], resize_image(cv2.imdecode(np.frombuffer(read_s3_object_content(self.s3_client, os.path.join(self.folder, self.meta_data[idx]["image"].removeprefix("mineru:"))), np.uint8), cv2.IMREAD_COLOR))
+        # return self.meta_data[idx]["image"], cv2.imdecode(np.frombuffer(read_s3_object_content(self.s3_client, os.path.join(self.folder, self.meta_data[idx]["image"].removeprefix("mineru:"))), np.uint8), cv2.IMREAD_COLOR)
 
 class localDataset(Dataset):
     def __init__(self, meta_data, folder):
@@ -39,4 +40,16 @@ class localDataset(Dataset):
     def __getitem__(self, idx):
         # with open(os.path.join(self.folder, self.meta_data[idx]["image"]), "rb") as f:
         #     return self.meta_data[idx]["image"], f.read()
-        return self.meta_data[idx]["image"], cv2.imread(os.path.join(self.folder, self.meta_data[idx]["image"]))
+
+        return self.meta_data[idx]["image"], resize_image(cv2.imread(os.path.join(self.folder, self.meta_data[idx]["image"])))
+        # return self.meta_data[idx]["image"], cv2.imread(os.path.join(self.folder, self.meta_data[idx]["image"]))
+
+
+def resize_image(image, threshold=1200):
+    # 当image的长或宽的最大值小于1200时，将其中比较大的一边拉伸到1200
+    max_side = max(image.shape[0], image.shape[1])
+    if max_side < threshold:
+        scale = threshold / max_side
+        new_size = (int(image.shape[1] * scale), int(image.shape[0] * scale))
+        image = cv2.resize(image, new_size)
+    return image

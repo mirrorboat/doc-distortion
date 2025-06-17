@@ -1,24 +1,23 @@
-# import json
-# import random
+import re
 
-# path = "/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/meta_data_subset/all_add_image_path_prefix_add_mineru_image_token_and_ocr_with_format.json"
+def extract_and_join(text):
+    # 定义正则表达式，匹配<|md_start|>和<|md_end|>之间的内容
+    pattern = r'<\|md_start\|>(.*?)<\|md_end\|>'
+    
+    # 使用 re.findall 提取所有匹配的内容
+    matches = re.findall(pattern, text, re.DOTALL)
+    
+    # 将提取的内容用 '\n\n' 拼接
+    result = '\n\n'.join(matches)
+    
+    return result
 
-# # 随机选取四分之一的数据并保存
+# 示例字符串
+text = """
+一些文本<|md_start|>第一段内容<|md_end|>更多文本
+另一些文本<|md_start|>第二段内容<|md_end|>结束
+"""
 
-# with open(path, "r") as f:
-#     meta_data = json.load(f)
-#     meta_data = random.sample(meta_data, len(meta_data))
-#     meta_data = meta_data[:int(len(meta_data)/4)]
-#     print(len(meta_data))
-
-# print(meta_data[:5])
-
-# with open("/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/meta_data_subset/all_add_image_path_prefix_add_mineru_image_token_and_ocr_with_format_1_4.json", "w") as f:
-#     json.dump(meta_data, f, indent=4)
-
-import json
-path="/mnt/petrelfs/chenjingzhou/cjz/doc-distortion/meta_data_subset/mineru_cn2M_1.json"
-
-with open(path, "r") as f:
-    meta_data = json.load(f)
-    print(meta_data[:5])
+# 调用函数并打印结果
+output = extract_and_join(text)
+print(output)

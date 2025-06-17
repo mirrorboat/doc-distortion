@@ -7,7 +7,7 @@ from tqdm import tqdm
 import cv2
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--chunk_num", type=int, default=8)
+parser.add_argument("--chunk_num", type=int, default=1)
 parser.add_argument("--chunk_idx", type=int, default=0)
 parser.add_argument("--distortion", type=str, required=True)
 # parser.add_argument("--data_name", type=str, required=True)
@@ -81,17 +81,17 @@ args = parser.parse_args()
 # }
 
 data_dict = {
-    'exam_cn140K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_exam_zh-140k.json",
+    # 'exam_cn140K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_exam_zh-140k.json",
     'mineru_cn2M': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_cn-2000k.json",
     'mineru_en2M': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_en-2000k.json",
-    'table_cn440K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_table_zh-440k.json",
-    'table_en100K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_table_en-100k.json",
+    # 'table_cn440K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_table_zh-440k.json",
+    # 'table_en100K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_table_en-100k.json",
     # 'exam_en8K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_exam_en-8k.json", # 用尽了
-    '3col_cn30K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_3col_zh-30k.json",
-    '3col_en20K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_3col_en-20k.json",
-    'newspaper_cn60K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_newspaper_zh-60k.json",
-    'math_cn200K': "/mnt/hwfile/opendatalab/zhangrui/shared_data/mineru_lvlm_data/mineru_math_cn200K.json",
-    'math_en200K': "/mnt/hwfile/opendatalab/zhangrui/shared_data/mineru_lvlm_data/mineru_math_en200K.json",
+    # '3col_cn30K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_3col_zh-30k.json",
+    # '3col_en20K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_3col_en-20k.json",
+    # 'newspaper_cn60K': "/mnt/hwfile/opendatalab/liuzheng/Mineru/dataset/Stage2/Mineru_newspaper_zh-60k.json",
+    # 'math_cn200K': "/mnt/hwfile/opendatalab/zhangrui/shared_data/mineru_lvlm_data/mineru_math_cn200K.json",
+    # 'math_en200K': "/mnt/hwfile/opendatalab/zhangrui/shared_data/mineru_lvlm_data/mineru_math_en200K.json",
 }
 
 
@@ -109,6 +109,9 @@ if __name__ == '__main__':
         idx_folder = args.idx_folder
         # data_name = args.data_name
 
+        # postfix = "_third_sampling"
+        # postfix = "_new"
+        postfix = ""
         # image_folder =  data_dict[data_name]['images']
         # meta_data_path = data_dict[data_name]['annotations']
         meta_data_path = data_dict[data_name]
@@ -119,7 +122,7 @@ if __name__ == '__main__':
         # if not data_dict[data_name].get("no_subset_idx", False):
         idxs1 = []
         for file in os.listdir(idx_folder):
-            if file.startswith(data_name) and file.endswith(f"_{distortion_2_postfix[args.distortion]}_third_sampling.txt"): # 第二次采样加了_new，第三次采样加了_third_sampling
+            if file.startswith(data_name) and file.endswith(f"_{distortion_2_postfix[args.distortion]}{postfix}.txt"): # 第二次采样加了_new，第三次采样加了_third_sampling
                 with open(os.path.join(idx_folder, file), "r") as f:
                     idxs1 = [int(idx.strip()) for idx in f.readlines()]
         
@@ -131,12 +134,12 @@ if __name__ == '__main__':
         print("2", flush=True)
 
         # # ############ Save meta data ############
-        # meta_data_save_folder = "./meta_data_subset_third_sampling"
-        # if not os.path.exists(meta_data_save_folder):
-        #     os.makedirs(meta_data_save_folder)
-        # with open(os.path.join(meta_data_save_folder, f"{data_name}_{distortion_2_postfix[args.distortion]}_third_sampling.json"), "w") as f: # 第二次采样加了_new，第三次采样加了_third_sampling
-        #     json.dump(meta_data, f, indent=4, ensure_ascii=False)
-        # continue
+        meta_data_save_folder = "./meta_data_subset_first_second_sampling"
+        os.makedirs(meta_data_save_folder, exist_ok=True)
+        with open(os.path.join(meta_data_save_folder, f"{data_name}_{distortion_2_postfix[args.distortion]}{postfix}.json"), "w") as f: # 第二次采样加了_new，第三次采样加了_third_sampling
+            json.dump(meta_data, f, indent=4, ensure_ascii=False)
+        print(f"{data_name}_done")
+        continue
         # # ########################################
 
         chunk_num = args.chunk_num

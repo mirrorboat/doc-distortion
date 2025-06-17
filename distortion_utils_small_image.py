@@ -28,13 +28,13 @@ class doc_distortion():
 
 
 class blur(doc_distortion):
-    def __init__(self, psf_folder, psf_size_mode="interval", ratio = 0.01, image_size_threshold=1200):
+    def __init__(self, psf_folder, psf_size_mode="interval", ratio_interval = (0.015, 0.025), image_size_threshold=1500):
         psf_paths = os.listdir(psf_folder)
         psf_paths = [os.path.join(psf_folder, psf_path) for psf_path in psf_paths]
         self.psf_list = [self.read_psf(psf_path) for psf_path in psf_paths]
         self.psf_size_mode = psf_size_mode
         self.image_size_threshold = image_size_threshold
-        self.ratio = ratio # the bigger the ratio, the bigger the psf size
+        self.ratio_interval = ratio_interval # the bigger the ratio, the bigger the psf size
 
     def read_psf(self, psf_path):
         psf = cv2.imread(psf_path, cv2.IMREAD_GRAYSCALE)
@@ -48,7 +48,9 @@ class blur(doc_distortion):
         psf = self.psf_list[idx]
 
         image_size = min(image.shape[:2])
-        image_size = min(image_size, self.image_size_threshold)
+        # 改为长宽的平均值
+        # image_size = int((image.shape[0] + image.shape[1]) / 2)
+        # image_size = min(image_size, self.image_size_threshold)
 
         if self.psf_size_mode == "interval":
             if image_size < 600:
@@ -58,10 +60,11 @@ class blur(doc_distortion):
             else:
                 psf_size = 11
         elif self.psf_size_mode == "ratio":
-            psf_size = int(image_size * self.ratio)
+            ratio = random.uniform(*self.ratio_interval)
+            psf_size = int(image_size * ratio)
             if psf_size % 2 == 0:
                 psf_size += 1
-            print(f"psf_size: {psf_size}")
+            # print(f"psf_size: {psf_size}")
         else:
             raise ValueError("psf_size_mode must be either 'interval' or 'ratio'.")
 
@@ -95,8 +98,8 @@ class shadow(doc_distortion):
                 transparency=None,
             ),
             ShadowCast(
-                shadow_vertices_range=(5,10),
-                shadow_opacity_range = (0.4, 0.6),
+                shadow_vertices_range=(4,8),
+                shadow_opacity_range = (0.7, 0.9),
                 shadow_width_range=(0.8, 1.0),
                 shadow_height_range=(0.8, 1.0),
                 p=1,
@@ -111,92 +114,83 @@ class shadow(doc_distortion):
 class wrap(doc_distortion):
     def __init__(self, ink_color_range=(-1, -1)):
         self.ink_color_range = ink_color_range
-        self.ink_phase = []
-        self.paper_phase = []
-        self.post_phase = [
+
+    def distortion(self, image):
+        ink_phase = []
+        paper_phase = []
+        post_phase = [
             Geometric(
-                rotate_range=(-5, 5),
-                p=0.2,
+                rotate_range = random.choice([(-20, -5), (5, 20)]),
+                p=0.9,
             ),
             Folding(
                 fold_x=None,
                 fold_deviation=(0, 0),
-                fold_angle_range=random.choice([(0,0), (90,90),(45,45), (0, 90)]),
-                fold_count=random.randint(2, 5),
-                fold_noise=random.uniform(0, 0.15),
+                fold_angle_range=(-180, 180),
+                fold_count=random.randint(5, 7),
+                fold_noise=random.uniform(0, 0.1),
                 gradient_width=(0.1, 0.2),
                 gradient_height=(0.01, 0.02),
             ),
         ]
-        self.pipeline = AugraphyPipeline(ink_phase=self.ink_phase, paper_phase=self.paper_phase, post_phase=self.post_phase, ink_color_range=self.ink_color_range)
+        self.pipeline = AugraphyPipeline(ink_phase=ink_phase, paper_phase=paper_phase, post_phase=post_phase, ink_color_range=self.ink_color_range)
 
-    def distortion(self, image):
         augmented_image = self.pipeline(image)
         return augmented_image
     
 class binarization(doc_distortion):
     def __init__(self, ink_color_range=(-1, -1)):
         self.ink_color_range = ink_color_range
-        self.ink_phase = [
+
+    def distortion(self, image):
+        ink_phase = [
             OneOf(
                 [
-                    BleedThrough(
-                        intensity_range=(0.6, 0.9),
-                        color_range=(0, 224),
-                        ksize=(17, 17),
-                        sigmaX=1,
-                        alpha=random.uniform(0.2, 0.3),
-                        offsets=(10, 20),
-                    ),
                     InkBleed(
                         intensity_range=(0.5, 0.6),
                         kernel_size=random.choice([(5, 5), (3, 3)]),
                         severity=(0.5, 0.6),
                     ),
-                    Letterpress(
-                        n_samples=(100, 400),
-                        n_clusters=(200, 400),
-                        std_range=(500, 3000),
-                        value_range=(150, 224),
-                        value_threshold_range=(96, 128),
-                        blur=1,
-                    ),
-                ],
-                p=1.0
-            ),
-        ]
-
-        self.paper_phase = [
-            OneOf(
-                [
-                    DelaunayTessellation(
-                        n_points_range=(500, 800),
-                        n_horizontal_points_range=(500, 800),
-                        n_vertical_points_range=(500, 800),
-                        noise_type="random",
-                        color_list="default",
-                        color_list_alternate="default",
-                    ),
-                    PatternGenerator(
-                        imgx=random.randint(256, 512),
-                        imgy=random.randint(256, 512),
-                        n_rotation_range=(10, 15),
-                        color="random",
-                        alpha_range=(0.15, 0.2),
-                    ),
-                    VoronoiTessellation(
-                        mult_range=(50, 80),
-                        seed=19829813472,
-                        num_cells_range=(500, 1000),
-                        noise_type="random",
-                        background_value=(200, 255),
-                    ),
+                    # Letterpress(
+                    #     n_samples=(100, 400),
+                    #     n_clusters=(200, 400),
+                    #     std_range=(500, 3000),
+                    #     value_range=(150, 224),
+                    #     value_threshold_range=(96, 128),
+                    #     blur=1,
+                    # ),
                 ],
             ),
         ]
-        self.post_phase = []
 
-    def distortion(self, image):
-        pipeline = AugraphyPipeline(ink_phase=self.ink_phase, paper_phase=self.paper_phase, post_phase=self.post_phase, ink_color_range=self.ink_color_range)
+        paper_phase = [
+            # PatternGenerator(
+            #     imgx=random.randint(256, 512),
+            #     imgy=random.randint(256, 512),
+            #     n_rotation_range=(10, 15),
+            #     color="random",
+            #     alpha_range=(0.4, 0.4),
+            # ),
+
+            BleedThrough(
+                intensity_range=(0.6, 0.9),
+                color_range=(0, 224),
+                ksize=(17, 17),
+                sigmaX=1,
+                alpha=random.uniform(0.2, 0.3),
+                offsets=(10, 20),
+            ),
+        ]
+
+        post_phase = [
+            Markup(
+                num_lines_range=(15, 20),
+                markup_length_range=(0.8, 1),
+                markup_thickness_range=(2, 3),
+                markup_type="highlight",
+            ),
+        ]
+
+        pipeline = AugraphyPipeline(ink_phase=ink_phase, paper_phase=paper_phase, post_phase=post_phase, ink_color_range=self.ink_color_range)
         augmented_image = pipeline(image)
         return augmented_image
